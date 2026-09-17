@@ -9,6 +9,8 @@ class UAV:
 
         self.status = "ACTIVE"
         self.current_task = None
+        self.path = []
+        self.path_index = 0
 
     def move_to(self, x, y):
         self.x = x
@@ -20,6 +22,25 @@ class UAV:
 
     def complete_task(self):
         self.current_task = None
+        self.path = []
+        self.path_index = 0
+
+    def set_path(self, path):
+        self.path = path
+        self.path_index = 1
+
+    def move_one_step(self):
+
+        if self.path_index >= len(self.path):
+            return False
+
+        x, y = self.path[self.path_index]
+
+        self.move_to(x, y)
+
+        self.path_index += 1
+
+        return True
 
     def fail(self):
         self.status = "FAILED"
