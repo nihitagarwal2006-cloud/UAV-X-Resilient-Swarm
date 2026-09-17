@@ -1,4 +1,3 @@
-
 class HeartbeatMonitor:
 
     def __init__(self, timeout=5):
@@ -9,9 +8,6 @@ class HeartbeatMonitor:
         failed_uavs = []
 
         for state in uav_states:
-
-            if not state.communication_status:
-                continue
 
             if current_time - state.last_heartbeat > self.timeout:
                 failed_uavs.append(state.uav_id)

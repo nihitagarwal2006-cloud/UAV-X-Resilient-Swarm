@@ -1,6 +1,8 @@
 from algorithms.mission_planner import MissionPlanner
 from algorithms.resilience_manager import ResilienceManager
 from communication.network import CommunicationNetwork
+from communication.heartbeat import HeartbeatMonitor
+from communication.uav_state import UAVState
 
 
 class Mission:
@@ -21,6 +23,12 @@ class Mission:
         self.connections = {}
 
         self.step_count = 0
+        self.heartbeat_monitor = HeartbeatMonitor(timeout=3)
+
+        self.uav_states = {
+            uav.id: UAVState(uav.id)
+            for uav in self.uavs
+        }
 
     def start(self):
 
@@ -51,6 +59,44 @@ class Mission:
     def step(self):
 
         self.step_count += 1
+
+        # Update heartbeat for communicating UAVs
+        for uav in self.uavs:
+
+            if uav.status == "ACTIVE":
+
+                state = self.uav_states[uav.id]
+
+                if state.communication_status:
+                    state.update_heartbeat(
+                        self.step_count
+                    )
+
+        print(
+            f"Heartbeat check at step "
+            f"{self.step_count}"
+        )
+
+        # Detect heartbeat timeouts
+        active_states = [
+            self.uav_states[uav.id]
+            for uav in self.uavs
+            if uav.status == "ACTIVE"
+        ]
+
+        failed_uavs = self.heartbeat_monitor.check(
+            active_states,
+            self.step_count
+        )
+
+        for uav_id in failed_uavs:
+
+            print(
+                f"Heartbeat timeout detected for "
+                f"UAV {uav_id}"
+            )
+
+            self.fail_uav(uav_id)
 
         old_connections = self.connections.copy()
 
