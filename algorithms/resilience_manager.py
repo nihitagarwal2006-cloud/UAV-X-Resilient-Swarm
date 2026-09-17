@@ -6,11 +6,19 @@ class ResilienceManager:
     def __init__(self):
         self.recovery = RecoveryManager()
 
-    def handle_failure(self, uavs, failed_uav_id, tasks, obstacles=None):
+    def handle_failure(
+        self,
+        uavs,
+        failed_uav_id,
+        tasks,
+        obstacles=None,
+        connections=None
+    ):
 
         for task in tasks:
 
             if task.assigned_uav == failed_uav_id:
+
                 print(
                     f"Task {task.id} affected by "
                     f"UAV {failed_uav_id} failure"
@@ -20,7 +28,8 @@ class ResilienceManager:
                     uavs,
                     failed_uav_id,
                     task,
-                    obstacles
+                    obstacles,
+                    connections
                 )
 
                 if replacement:

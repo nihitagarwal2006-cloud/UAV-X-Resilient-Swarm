@@ -1,16 +1,24 @@
 from algorithms.mission_planner import MissionPlanner
 from algorithms.resilience_manager import ResilienceManager
+from communication.network import CommunicationNetwork
 
 
 class Mission:
 
     def __init__(self, uavs, tasks, obstacles=None):
+
         self.uavs = uavs
         self.tasks = tasks
         self.obstacles = obstacles or []
 
         self.planner = MissionPlanner()
         self.resilience = ResilienceManager()
+
+        self.network = CommunicationNetwork(
+            communication_range=6
+        )
+
+        self.connections = {}
 
         self.step_count = 0
 
@@ -31,11 +39,20 @@ class Mission:
 
             uav.set_path(data["path"])
 
+        self.connections = self.network.update_connections(
+            self.uavs
+        )
+
         print("MISSION STARTED")
+
+        print("\nINITIAL COMMUNICATION NETWORK:")
+        print(self.connections)
 
     def step(self):
 
         self.step_count += 1
+
+        old_connections = self.connections.copy()
 
         for uav in self.uavs:
 
@@ -72,6 +89,30 @@ class Mission:
                         f"UAV {uav.id}"
                     )
 
+        self.connections = self.network.update_connections(
+            self.uavs
+        )
+
+        lost_links, new_links = (
+            self.network.get_link_changes(
+                old_connections
+            )
+        )
+
+        if lost_links:
+
+            print(
+                f"Communication links lost: "
+                f"{lost_links}"
+            )
+
+        if new_links:
+
+            print(
+                f"Communication links restored: "
+                f"{new_links}"
+            )
+
     def fail_uav(self, uav_id):
 
         uav = next(
@@ -91,15 +132,24 @@ class Mission:
         uav.fail()
 
         print(
-            f"UAV {uav_id} FAILED "
+            f"\nUAV {uav_id} FAILED "
             f"at mission step {self.step_count}"
+        )
+
+        self.connections = self.network.update_connections(
+            [
+                uav
+                for uav in self.uavs
+                if uav.status == "ACTIVE"
+            ]
         )
 
         replacement = self.resilience.handle_failure(
             self.uavs,
             uav_id,
             self.tasks,
-            self.obstacles
+            self.obstacles,
+            self.connections
         )
 
         if replacement:
@@ -113,7 +163,7 @@ class Mission:
 
             print(
                 "Recovery failed: "
-                "no replacement UAV available"
+                "no suitable replacement UAV available"
             )
 
     def is_complete(self):
