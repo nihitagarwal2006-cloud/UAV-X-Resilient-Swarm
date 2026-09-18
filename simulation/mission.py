@@ -7,7 +7,13 @@ from communication.uav_state import UAVState
 
 class Mission:
 
-    def __init__(self, uavs, tasks, obstacles=None):
+    def __init__(
+        self,
+        uavs,
+        tasks,
+        obstacles=None,
+        failure_simulator=None
+    ):
 
         self.uavs = uavs
         self.tasks = tasks
@@ -25,8 +31,10 @@ class Mission:
         self.step_count = 0
 
         self.heartbeat_monitor = HeartbeatMonitor(
-            timeout=2
+            timeout=3
         )
+
+        self.failure_simulator = failure_simulator
 
         self.uav_states = {
             uav.id: UAVState(uav.id)
@@ -63,34 +71,24 @@ class Mission:
 
         self.step_count += 1
 
-        # -----------------------------
-        # HEARTBEAT UPDATE
-        # -----------------------------
-
+        # Update heartbeat for communicating UAVs
         for uav in self.uavs:
 
-            if uav.status != "ACTIVE":
-                continue
+            if uav.status == "ACTIVE":
 
-            state = self.uav_states[uav.id]
+                state = self.uav_states[uav.id]
 
-            # Heartbeat only works when
-            # communication is available.
-            if state.communication_status:
-
-                state.update_heartbeat(
-                    self.step_count
-                )
+                if state.communication_status:
+                    state.update_heartbeat(
+                        self.step_count
+                    )
 
         print(
             f"Heartbeat check at step "
             f"{self.step_count}"
         )
 
-        # -----------------------------
-        # FAILURE DETECTION
-        # -----------------------------
-
+        # Detect heartbeat timeout
         active_states = [
             self.uav_states[uav.id]
             for uav in self.uavs
@@ -111,12 +109,24 @@ class Mission:
 
             self.fail_uav(uav_id)
 
-        # -----------------------------
-        # UAV MOVEMENT
-        # -----------------------------
+        # Check technical failure scenario
+        if self.failure_simulator:
+
+            for uav in self.uavs:
+
+                if uav.status != "ACTIVE":
+                    continue
+
+                if self.failure_simulator.check_failure(
+                    self.step_count,
+                    uav
+                ):
+
+                    self.fail_uav(uav.id)
 
         old_connections = self.connections.copy()
 
+        # Move active UAVs
         for uav in self.uavs:
 
             if uav.status != "ACTIVE":
@@ -131,10 +141,6 @@ class Mission:
                 f"UAV {uav.id} -> "
                 f"({uav.x}, {uav.y})"
             )
-
-            # -------------------------
-            # TASK COMPLETION
-            # -------------------------
 
             if uav.path_index >= len(uav.path):
 
@@ -155,10 +161,6 @@ class Mission:
                         f"Task {task.id} completed by "
                         f"UAV {uav.id}"
                     )
-
-        # -----------------------------
-        # UPDATE NETWORK
-        # -----------------------------
 
         self.connections = self.network.update_connections(
             self.uavs
@@ -207,8 +209,6 @@ class Mission:
             f"at mission step {self.step_count}"
         )
 
-        # Remove failed UAV from
-        # active communication network.
         self.connections = self.network.update_connections(
             [
                 uav

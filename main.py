@@ -1,20 +1,32 @@
 from simulation.uav import UAV
 from simulation.task import Task
 from simulation.mission import Mission
+from simulation.failure import FailureSimulator
 
 
-# ==============================
+# ============================================================
 # SCENARIO CONFIGURATION
-# ==============================
+# ============================================================
+#
+# NORMAL
+#   -> No failures
+#
+# TECHNICAL_FAILURE
+#   -> Selected UAV experiences a technical failure
+#
+# COMMUNICATION_FAILURE
+#   -> Selected UAV loses communication
+#
+SCENARIO = "NORMAL"
 
-FAILURE_MODE = "communication"
+# Used only for failure scenarios
 FAILURE_UAV_ID = 2
-FAILURE_STEP = 4
+FAILURE_STEP = 6
 
 
-# ==============================
-# UAVs
-# ==============================
+# ============================================================
+# UAV SWARM
+# ============================================================
 
 uavs = [
     UAV(1, 1, 1),
@@ -24,9 +36,9 @@ uavs = [
 ]
 
 
-# ==============================
-# Tasks
-# ==============================
+# ============================================================
+# MISSION TASKS
+# ============================================================
 
 tasks = [
     Task(1, 8, 8),
@@ -35,56 +47,98 @@ tasks = [
 ]
 
 
-# ==============================
-# Start Mission
-# ==============================
+# ============================================================
+# FAILURE CONFIGURATION
+# ============================================================
 
-mission = Mission(uavs, tasks)
+failure_simulator = None
+
+if SCENARIO == "TECHNICAL_FAILURE":
+
+    failure_simulator = FailureSimulator(
+        failure_step=FAILURE_STEP,
+        uav_id=FAILURE_UAV_ID
+    )
+
+
+# ============================================================
+# CREATE MISSION
+# ============================================================
+
+mission = Mission(
+    uavs,
+    tasks,
+    failure_simulator=failure_simulator
+)
+
+
+# ============================================================
+# START MISSION
+# ============================================================
 
 mission.start()
 
 
-# ==============================
-# Simulation Loop
-# ==============================
+# ============================================================
+# RUN SIMULATION
+# ============================================================
+
+MAX_STEPS = 1000
 
 while not mission.is_complete():
 
-    # --------------------------------
-    # Simulate technical issue
-    # --------------------------------
+    # --------------------------------------------------------
+    # Communication failure scenario
+    # --------------------------------------------------------
 
-    if mission.step_count == FAILURE_STEP:
+    if (
+        SCENARIO == "COMMUNICATION_FAILURE"
+        and mission.step_count == FAILURE_STEP
+    ):
 
-        if FAILURE_MODE == "communication":
+        mission.uav_states[FAILURE_UAV_ID].set_communication(False)
 
-            mission.uav_states[
-                FAILURE_UAV_ID
-            ].set_communication(False)
+        print(
+            f"\nCOMMUNICATION FAILURE: "
+            f"UAV {FAILURE_UAV_ID} communication lost\n"
+        )
 
-            print(
-                f"\nUAV {FAILURE_UAV_ID} "
-                f"COMMUNICATION LOST"
-            )
-
-        elif FAILURE_MODE == "uav_failure":
-
-            mission.fail_uav(
-                FAILURE_UAV_ID
-            )
-
-    # --------------------------------
-    # Run next simulation step
-    # --------------------------------
+    # --------------------------------------------------------
+    # Execute one simulation step
+    # --------------------------------------------------------
 
     mission.step()
 
+    # --------------------------------------------------------
+    # Safety protection against infinite simulation
+    # --------------------------------------------------------
 
-# ==============================
-# Final Results
-# ==============================
+    if mission.step_count >= MAX_STEPS:
 
-print("\nMISSION COMPLETE")
+        print(
+            "\nMISSION STOPPED: "
+            "Maximum simulation steps reached."
+        )
+
+        break
+
+
+# ============================================================
+# FINAL RESULTS
+# ============================================================
+
+if mission.is_complete():
+
+    print("\nMISSION COMPLETE")
+
+else:
+
+    print("\nMISSION INCOMPLETE")
+
+
+# ============================================================
+# FINAL TASK STATUS
+# ============================================================
 
 print("\nFINAL TASK STATUS:")
 
@@ -95,6 +149,10 @@ for task in tasks:
         f"{task.status}"
     )
 
+
+# ============================================================
+# FINAL UAV STATUS
+# ============================================================
 
 print("\nFINAL UAV STATUS:")
 
