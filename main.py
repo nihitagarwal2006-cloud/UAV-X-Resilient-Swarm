@@ -17,7 +17,7 @@ from simulation.failure import FailureSimulator
 # COMMUNICATION_FAILURE
 #   -> Selected UAV loses communication
 #
-SCENARIO = "NORMAL"
+SCENARIO = "TECHNICAL_FAILURE"
 
 # Used only for failure scenarios
 FAILURE_UAV_ID = 2
