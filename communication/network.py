@@ -10,23 +10,38 @@ class CommunicationNetwork:
     def distance(self, uav1, uav2):
         dx = uav1.x - uav2.x
         dy = uav1.y - uav2.y
+
         return math.sqrt(dx * dx + dy * dy)
 
     def update_connections(self, uavs):
 
+        active_uavs = [
+            uav for uav in uavs
+            if uav.status == "ACTIVE"
+        ]
+
         new_connections = {}
 
-        for uav in uavs:
+        for uav in active_uavs:
             new_connections[uav.id] = []
 
-        for i in range(len(uavs)):
-            for j in range(i + 1, len(uavs)):
+        for i in range(len(active_uavs)):
+            for j in range(i + 1, len(active_uavs)):
 
-                distance = self.distance(uavs[i], uavs[j])
+                distance = self.distance(
+                    active_uavs[i],
+                    active_uavs[j]
+                )
 
                 if distance <= self.communication_range:
-                    new_connections[uavs[i].id].append(uavs[j].id)
-                    new_connections[uavs[j].id].append(uavs[i].id)
+
+                    new_connections[
+                        active_uavs[i].id
+                    ].append(active_uavs[j].id)
+
+                    new_connections[
+                        active_uavs[j].id
+                    ].append(active_uavs[i].id)
 
         self.connections = new_connections
 
@@ -42,18 +57,28 @@ class CommunicationNetwork:
 
         for uav_id, old_neighbors in old_connections.items():
 
-            current_neighbors = self.connections.get(uav_id, [])
+            current_neighbors = self.connections.get(
+                uav_id, []
+            )
 
             for neighbor in old_neighbors:
+
                 if neighbor not in current_neighbors:
-                    link = tuple(sorted((uav_id, neighbor)))
+
+                    link = tuple(
+                        sorted((uav_id, neighbor))
+                    )
 
                     if link not in lost_links:
                         lost_links.append(link)
 
             for neighbor in current_neighbors:
+
                 if neighbor not in old_neighbors:
-                    link = tuple(sorted((uav_id, neighbor)))
+
+                    link = tuple(
+                        sorted((uav_id, neighbor))
+                    )
 
                     if link not in new_links:
                         new_links.append(link)
