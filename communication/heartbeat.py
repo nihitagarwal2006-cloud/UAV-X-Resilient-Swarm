@@ -9,7 +9,14 @@ class HeartbeatMonitor:
 
         for state in uav_states:
 
-            if current_time - state.last_heartbeat > self.timeout:
+            # Communication is lost
+            if not state.communication_status:
+
+                if current_time - state.last_heartbeat >= self.timeout:
+                    failed_uavs.append(state.uav_id)
+
+            # Normal heartbeat timeout
+            elif current_time - state.last_heartbeat >= self.timeout:
                 failed_uavs.append(state.uav_id)
 
         return failed_uavs
