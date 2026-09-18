@@ -14,12 +14,12 @@ class FailureSimulator:
             and not self.failed
             and uav.status == "ACTIVE"
         ):
-            uav.fail()
+
             self.failed = True
 
             print(
-                f"\nTECHNICAL FAILURE: "
-                f"UAV {uav.id} failed at step {current_step}\n"
+                f"\nTECHNICAL FAILURE DETECTED: "
+                f"UAV {uav.id} at step {current_step}\n"
             )
 
             return True
