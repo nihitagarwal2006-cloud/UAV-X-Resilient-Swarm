@@ -114,6 +114,22 @@ def screen_pos(x, y):
     return int(sx), int(sy)
 
 
+def grid_pos(mouse_x, mouse_y):
+
+    x = round(
+        (mouse_x - GRID_X) / GRID_SIZE * 20
+    )
+
+    y = round(
+        (mouse_y - GRID_Y) / GRID_SIZE * 20
+    )
+
+    x = max(0, min(20, x))
+    y = max(0, min(20, y))
+
+    return x, y
+
+
 # =====================================
 # MAIN LOOP
 # =====================================
@@ -122,16 +138,80 @@ running = True
 finished = False
 timer = 0
 
+next_task_id = max(
+    task.id for task in tasks
+) + 1
+
+
 while running:
 
     dt = clock.tick(60)
 
     timer += dt
 
+
+    # =================================
+    # EVENTS
+    # =================================
+
     for event in pygame.event.get():
 
         if event.type == pygame.QUIT:
+
             running = False
+
+
+        # =================================
+        # CREATE TASK BY CLICKING MAP
+        # =================================
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+
+            mouse_x, mouse_y = event.pos
+
+            if (
+                GRID_X <= mouse_x <= GRID_X + GRID_SIZE
+                and
+                GRID_Y <= mouse_y <= GRID_Y + GRID_SIZE
+            ):
+
+                grid_x, grid_y = grid_pos(
+                    mouse_x,
+                    mouse_y
+                )
+
+                new_task = Task(
+                    next_task_id,
+                    grid_x,
+                    grid_y,
+                    priority="HIGH"
+                )
+
+                created = mission.add_task(
+                    new_task
+                )
+
+                if created:
+
+                    print(
+                        f"\nTASK {new_task.id} CREATED"
+                    )
+
+                    print(
+                        f"Location: "
+                        f"({grid_x}, {grid_y})"
+                    )
+
+                    print(
+                        f"Assigned UAV: "
+                        f"{new_task.assigned_uav}"
+                    )
+
+                    next_task_id += 1
+
+                    finished = False
+
+                    timer = 0
 
 
     # =================================
@@ -185,6 +265,22 @@ while running:
     screen.blit(
         subtitle,
         (37, 62)
+    )
+
+
+    # =================================
+    # INTERACTIVE INSTRUCTION
+    # =================================
+
+    instruction = small.render(
+        "CLICK MAP TO CREATE TASK",
+        True,
+        (255, 200, 80)
+    )
+
+    screen.blit(
+        instruction,
+        (GRID_X, 88)
     )
 
 

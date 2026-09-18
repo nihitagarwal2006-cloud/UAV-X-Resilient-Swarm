@@ -56,16 +56,87 @@ class Mission:
                 if uav.id == data["uav"]
             )
 
-            uav.set_path(data["path"])
+            if data["path"]:
+                uav.set_path(data["path"])
 
         self.connections = self.network.update_connections(
-            self.uavs
+            [
+                uav for uav in self.uavs
+                if uav.status == "ACTIVE"
+            ]
         )
 
         print("MISSION STARTED")
 
         print("\nINITIAL COMMUNICATION NETWORK:")
         print(self.connections)
+
+    def add_task(self, task):
+
+        print(
+            f"\nNEW TASK CREATED: "
+            f"Task {task.id} at ({task.x}, {task.y})"
+        )
+
+        self.tasks.append(task)
+
+        mission = self.planner.plan_mission(
+            self.uavs,
+            [task],
+            self.obstacles
+        )
+
+        if task.id not in mission:
+
+            print(
+                f"No available UAV for Task {task.id}"
+            )
+
+            self.tasks.remove(task)
+
+            return False
+
+        data = mission[task.id]
+
+        uav = next(
+            uav for uav in self.uavs
+            if uav.id == data["uav"]
+        )
+
+        path = data["path"]
+
+        if not path:
+
+            print(
+                f"No valid path found for Task {task.id}"
+            )
+
+            task.status = "UNASSIGNED"
+            task.assigned_uav = None
+            self.tasks.remove(task)
+
+            return False
+
+        uav.set_path(path)
+
+        print(
+            f"Task {task.id} assigned to "
+            f"UAV {uav.id}"
+        )
+
+        print(
+            f"UAV {uav.id} travelling to "
+            f"({task.x}, {task.y})"
+        )
+
+        self.connections = self.network.update_connections(
+            [
+                uav for uav in self.uavs
+                if uav.status == "ACTIVE"
+            ]
+        )
+
+        return True
 
     def step(self):
 
@@ -163,7 +234,10 @@ class Mission:
                     )
 
         self.connections = self.network.update_connections(
-            self.uavs
+            [
+                uav for uav in self.uavs
+                if uav.status == "ACTIVE"
+            ]
         )
 
         lost_links, new_links = (
@@ -241,7 +315,10 @@ class Mission:
 
     def is_complete(self):
 
-        return all(
-            task.status == "COMPLETED"
-            for task in self.tasks
+        return (
+            len(self.tasks) > 0
+            and all(
+                task.status == "COMPLETED"
+                for task in self.tasks
+            )
         )
