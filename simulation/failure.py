@@ -1,20 +1,26 @@
 class FailureSimulator:
 
-    def __init__(self, failure_step):
+    def __init__(self, failure_step=None, uav_id=None):
         self.failure_step = failure_step
+        self.uav_id = uav_id
         self.failed = False
 
     def check_failure(self, current_step, uav):
 
         if (
-            current_step == self.failure_step
+            self.failure_step is not None
+            and current_step == self.failure_step
+            and uav.id == self.uav_id
             and not self.failed
             and uav.status == "ACTIVE"
         ):
             uav.fail()
             self.failed = True
 
-            print(f"\nUAV {uav.id} FAILED at step {current_step}!\n")
+            print(
+                f"\nTECHNICAL FAILURE: "
+                f"UAV {uav.id} failed at step {current_step}\n"
+            )
 
             return True
 

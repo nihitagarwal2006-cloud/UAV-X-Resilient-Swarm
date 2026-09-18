@@ -3,18 +3,13 @@ from simulation.task import Task
 from simulation.mission import Mission
 
 
-# ==============================
-# SCENARIO CONFIGURATION
-# ==============================
+# Available scenarios:
+# NORMAL
+# COMMUNICATION_FAILURE
+# TECHNICAL_FAILURE
 
-FAILURE_MODE = "communication"
-FAILURE_UAV_ID = 2
-FAILURE_STEP = 4
+SCENARIO = "NORMAL"
 
-
-# ==============================
-# UAVs
-# ==============================
 
 uavs = [
     UAV(1, 1, 1),
@@ -23,11 +18,6 @@ uavs = [
     UAV(4, 5, 15)
 ]
 
-
-# ==============================
-# Tasks
-# ==============================
-
 tasks = [
     Task(1, 8, 8),
     Task(2, 18, 3),
@@ -35,61 +25,38 @@ tasks = [
 ]
 
 
-# ==============================
-# Start Mission
-# ==============================
-
 mission = Mission(uavs, tasks)
 
 mission.start()
 
 
-# ==============================
-# Simulation Loop
-# ==============================
-
 while not mission.is_complete():
 
-    # --------------------------------
-    # Simulate technical issue
-    # --------------------------------
+    # Communication failure scenario
+    if (
+        SCENARIO == "COMMUNICATION_FAILURE"
+        and mission.step_count == 4
+    ):
+        mission.uav_states[2].set_communication(False)
 
-    if mission.step_count == FAILURE_STEP:
+        print("\nUAV 2 COMMUNICATION LOST")
 
-        if FAILURE_MODE == "communication":
-
-            mission.uav_states[
-                FAILURE_UAV_ID
-            ].set_communication(False)
-
-            print(
-                f"\nUAV {FAILURE_UAV_ID} "
-                f"COMMUNICATION LOST"
-            )
-
-        elif FAILURE_MODE == "uav_failure":
-
-            mission.fail_uav(
-                FAILURE_UAV_ID
-            )
-
-    # --------------------------------
-    # Run next simulation step
-    # --------------------------------
+    # Technical failure scenario
+    if (
+        SCENARIO == "TECHNICAL_FAILURE"
+        and mission.step_count == 6
+    ):
+        print("\nTECHNICAL ISSUE DETECTED IN UAV 2")
+        mission.fail_uav(2)
 
     mission.step()
 
-
-# ==============================
-# Final Results
-# ==============================
 
 print("\nMISSION COMPLETE")
 
 print("\nFINAL TASK STATUS:")
 
 for task in tasks:
-
     print(
         f"Task {task.id}: "
         f"{task.status}"
@@ -99,7 +66,6 @@ for task in tasks:
 print("\nFINAL UAV STATUS:")
 
 for uav in uavs:
-
     print(
         f"UAV {uav.id}: "
         f"{uav.status}"
