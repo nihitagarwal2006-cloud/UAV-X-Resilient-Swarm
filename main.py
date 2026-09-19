@@ -43,17 +43,20 @@ tasks = [
 
 failure_simulator = None
 
-
 technical_failures = (
     scenario.get_technical_failures()
 )
-
 
 if technical_failures:
 
     failure_simulator = FailureSimulator(
         failures=technical_failures
     )
+
+
+communication_failures = (
+    scenario.get_communication_failures()
+)
 
 
 # ============================================================
@@ -68,7 +71,7 @@ mission = Mission(
 
 
 # ============================================================
-# START MISSION
+# START
 # ============================================================
 
 print("\n========================================")
@@ -90,12 +93,6 @@ if technical_failures:
             f"-> Step {failure['step']}"
         )
 
-
-communication_failures = (
-    scenario.get_communication_failures()
-)
-
-
 if communication_failures:
 
     print("\nCOMMUNICATION FAILURE EVENTS:")
@@ -107,8 +104,9 @@ if communication_failures:
             f"-> Step {failure['step']}"
         )
 
-
-print("\n========================================\n")
+print(
+    "\n========================================\n"
+)
 
 
 mission.start()
@@ -122,9 +120,9 @@ MAX_STEPS = 1000
 
 while not mission.is_complete():
 
-    # --------------------------------------------------------
-    # Communication failure scenario
-    # --------------------------------------------------------
+    # ----------------------------------------
+    # Communication failures
+    # ----------------------------------------
 
     for failure in communication_failures:
 
@@ -155,17 +153,15 @@ while not mission.is_complete():
                     f"{mission.step_count}\n"
                 )
 
-
-    # --------------------------------------------------------
-    # Execute one simulation step
-    # --------------------------------------------------------
+    # ----------------------------------------
+    # Execute simulation step
+    # ----------------------------------------
 
     mission.step()
 
-
-    # --------------------------------------------------------
-    # Safety protection
-    # --------------------------------------------------------
+    # ----------------------------------------
+    # Safety limit
+    # ----------------------------------------
 
     if mission.step_count >= MAX_STEPS:
 
@@ -248,4 +244,61 @@ if failure_simulator:
         print("  None")
 
 
+# ============================================================
+# MISSION METRICS
+# ============================================================
+
+metrics = mission.get_metrics()
+
 print("\n========================================")
+print("MISSION METRICS")
+print("========================================")
+
+print(
+    f"Total Tasks: "
+    f"{metrics['total_tasks']}"
+)
+
+print(
+    f"Completed Tasks: "
+    f"{metrics['completed_tasks']}"
+)
+
+print(
+    f"Completion Rate: "
+    f"{metrics['completion_rate']:.1f}%"
+)
+
+print(
+    f"UAV Failures: "
+    f"{metrics['uav_failures']}"
+)
+
+print(
+    f"Recovery Events: "
+    f"{metrics['recovery_events']}"
+)
+
+print(
+    f"Communication Failures: "
+    f"{metrics['communication_failures']}"
+)
+
+print(
+    f"Mission Steps: "
+    f"{metrics['mission_steps']}"
+)
+
+print(
+    f"Failed UAVs: "
+    f"{metrics['failed_uavs']}"
+)
+
+print(
+    f"Recovered Tasks: "
+    f"{metrics['recovered_tasks']}"
+)
+
+print(
+    "========================================"
+)
