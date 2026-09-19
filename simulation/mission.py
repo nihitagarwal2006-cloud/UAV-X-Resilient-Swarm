@@ -3,6 +3,7 @@ from algorithms.resilience_manager import ResilienceManager
 from communication.network import CommunicationNetwork
 from communication.heartbeat import HeartbeatMonitor
 from communication.uav_state import UAVState
+from simulation.metrics import MissionMetrics
 
 
 class Mission:
@@ -41,6 +42,18 @@ class Mission:
             for uav in self.uavs
         }
 
+        # =====================================
+        # MISSION METRICS
+        # =====================================
+
+        self.metrics = MissionMetrics()
+
+        self.metrics.initialize(
+            self.tasks
+        )
+
+        self.communication_failures_recorded = set()
+
     def start(self):
 
         mission = self.planner.plan_mission(
@@ -57,25 +70,38 @@ class Mission:
             )
 
             if data["path"]:
-                uav.set_path(data["path"])
+                uav.set_path(
+                    data["path"]
+                )
 
-        self.connections = self.network.update_connections(
-            [
-                uav for uav in self.uavs
-                if uav.status == "ACTIVE"
-            ]
+        self.connections = (
+            self.network.update_connections(
+                [
+                    uav
+                    for uav in self.uavs
+                    if uav.status == "ACTIVE"
+                ]
+            )
+        )
+
+        self.metrics.update_task_status(
+            self.tasks
         )
 
         print("MISSION STARTED")
 
-        print("\nINITIAL COMMUNICATION NETWORK:")
+        print(
+            "\nINITIAL COMMUNICATION NETWORK:"
+        )
+
         print(self.connections)
 
     def add_task(self, task):
 
         print(
             f"\nNEW TASK CREATED: "
-            f"Task {task.id} at ({task.x}, {task.y})"
+            f"Task {task.id} "
+            f"at ({task.x}, {task.y})"
         )
 
         self.tasks.append(task)
@@ -89,7 +115,8 @@ class Mission:
         if task.id not in mission:
 
             print(
-                f"No available UAV for Task {task.id}"
+                f"No available UAV for "
+                f"Task {task.id}"
             )
 
             self.tasks.remove(task)
@@ -108,11 +135,13 @@ class Mission:
         if not path:
 
             print(
-                f"No valid path found for Task {task.id}"
+                f"No valid path found for "
+                f"Task {task.id}"
             )
 
             task.status = "UNASSIGNED"
             task.assigned_uav = None
+
             self.tasks.remove(task)
 
             return False
@@ -129,11 +158,18 @@ class Mission:
             f"({task.x}, {task.y})"
         )
 
-        self.connections = self.network.update_connections(
-            [
-                uav for uav in self.uavs
-                if uav.status == "ACTIVE"
-            ]
+        self.metrics.update_task_status(
+            self.tasks
+        )
+
+        self.connections = (
+            self.network.update_connections(
+                [
+                    uav
+                    for uav in self.uavs
+                    if uav.status == "ACTIVE"
+                ]
+            )
         )
 
         return True
@@ -142,14 +178,24 @@ class Mission:
 
         self.step_count += 1
 
-        # Update heartbeat for communicating UAVs
+        self.metrics.update_step(
+            self.step_count
+        )
+
+        # =====================================
+        # UPDATE HEARTBEATS
+        # =====================================
+
         for uav in self.uavs:
 
             if uav.status == "ACTIVE":
 
-                state = self.uav_states[uav.id]
+                state = self.uav_states[
+                    uav.id
+                ]
 
                 if state.communication_status:
+
                     state.update_heartbeat(
                         self.step_count
                     )
@@ -159,28 +205,63 @@ class Mission:
             f"{self.step_count}"
         )
 
-        # Detect heartbeat timeout
+        # =====================================
+        # RECORD COMMUNICATION FAILURES
+        # =====================================
+
+        for uav in self.uavs:
+
+            state = self.uav_states[
+                uav.id
+            ]
+
+            if (
+                not state.communication_status
+                and
+                uav.id
+                not in self.communication_failures_recorded
+            ):
+
+                self.metrics.record_communication_failure(
+                    uav.id
+                )
+
+                self.communication_failures_recorded.add(
+                    uav.id
+                )
+
+        # =====================================
+        # HEARTBEAT TIMEOUT
+        # =====================================
+
         active_states = [
             self.uav_states[uav.id]
             for uav in self.uavs
             if uav.status == "ACTIVE"
         ]
 
-        failed_uavs = self.heartbeat_monitor.check(
-            active_states,
-            self.step_count
+        failed_uavs = (
+            self.heartbeat_monitor.check(
+                active_states,
+                self.step_count
+            )
         )
 
         for uav_id in failed_uavs:
 
             print(
-                f"Heartbeat timeout detected for "
-                f"UAV {uav_id}"
+                f"Heartbeat timeout detected "
+                f"for UAV {uav_id}"
             )
 
-            self.fail_uav(uav_id)
+            self.fail_uav(
+                uav_id
+            )
 
-        # Check technical failure scenario
+        # =====================================
+        # TECHNICAL FAILURE
+        # =====================================
+
         if self.failure_simulator:
 
             for uav in self.uavs:
@@ -193,17 +274,26 @@ class Mission:
                     uav
                 ):
 
-                    self.fail_uav(uav.id)
+                    self.fail_uav(
+                        uav.id
+                    )
 
-        old_connections = self.connections.copy()
+        old_connections = (
+            self.connections.copy()
+        )
 
-        # Move active UAVs
+        # =====================================
+        # MOVE ACTIVE UAVs
+        # =====================================
+
         for uav in self.uavs:
 
             if uav.status != "ACTIVE":
                 continue
 
-            if uav.path_index >= len(uav.path):
+            if uav.path_index >= len(
+                uav.path
+            ):
                 continue
 
             uav.move_one_step()
@@ -213,12 +303,17 @@ class Mission:
                 f"({uav.x}, {uav.y})"
             )
 
-            if uav.path_index >= len(uav.path):
+            if (
+                uav.path_index
+                >= len(uav.path)
+            ):
 
                 task = next(
                     (
-                        task for task in self.tasks
-                        if task.assigned_uav == uav.id
+                        task
+                        for task in self.tasks
+                        if task.assigned_uav
+                        == uav.id
                     ),
                     None
                 )
@@ -226,18 +321,35 @@ class Mission:
                 if task:
 
                     task.complete()
+
                     uav.complete_task()
 
                     print(
-                        f"Task {task.id} completed by "
+                        f"Task {task.id} "
+                        f"completed by "
                         f"UAV {uav.id}"
                     )
 
-        self.connections = self.network.update_connections(
-            [
-                uav for uav in self.uavs
-                if uav.status == "ACTIVE"
-            ]
+        # =====================================
+        # UPDATE METRICS
+        # =====================================
+
+        self.metrics.update_task_status(
+            self.tasks
+        )
+
+        # =====================================
+        # UPDATE COMMUNICATION NETWORK
+        # =====================================
+
+        self.connections = (
+            self.network.update_connections(
+                [
+                    uav
+                    for uav in self.uavs
+                    if uav.status == "ACTIVE"
+                ]
+            )
         )
 
         lost_links, new_links = (
@@ -264,7 +376,8 @@ class Mission:
 
         uav = next(
             (
-                uav for uav in self.uavs
+                uav
+                for uav in self.uavs
                 if uav.id == uav_id
             ),
             None
@@ -278,31 +391,68 @@ class Mission:
 
         uav.fail()
 
+        # =====================================
+        # RECORD UAV FAILURE
+        # =====================================
+
+        self.metrics.record_uav_failure(
+            uav_id
+        )
+
         print(
             f"\nUAV {uav_id} FAILED "
-            f"at mission step {self.step_count}"
+            f"at mission step "
+            f"{self.step_count}"
         )
 
-        self.connections = self.network.update_connections(
-            [
-                uav
-                for uav in self.uavs
-                if uav.status == "ACTIVE"
-            ]
+        self.connections = (
+            self.network.update_connections(
+                [
+                    uav
+                    for uav in self.uavs
+                    if uav.status == "ACTIVE"
+                ]
+            )
         )
 
-        replacement = self.resilience.handle_failure(
-            self.uavs,
-            uav_id,
-            self.tasks,
-            self.obstacles,
-            self.connections
+        # =====================================
+        # RESILIENCE / RECOVERY
+        # =====================================
+
+        replacement = (
+            self.resilience.handle_failure(
+                self.uavs,
+                uav_id,
+                self.tasks,
+                self.obstacles,
+                self.connections
+            )
         )
 
         if replacement:
 
+            recovered_task = next(
+                (
+                    task
+                    for task in self.tasks
+                    if task.assigned_uav
+                    == replacement.id
+                    and task.status
+                    == "ASSIGNED"
+                ),
+                None
+            )
+
+            if recovered_task:
+
+                self.metrics.record_recovery(
+                    recovered_task.id,
+                    replacement.id
+                )
+
             print(
-                f"Recovery: UAV {replacement.id} "
+                f"Recovery: UAV "
+                f"{replacement.id} "
                 f"taking over the task"
             )
 
@@ -310,15 +460,34 @@ class Mission:
 
             print(
                 "Recovery failed: "
-                "no suitable replacement UAV available"
+                "no suitable replacement "
+                "UAV available"
             )
+
+        self.metrics.update_task_status(
+            self.tasks
+        )
 
     def is_complete(self):
 
         return (
             len(self.tasks) > 0
-            and all(
-                task.status == "COMPLETED"
+            and
+            all(
+                task.status
+                == "COMPLETED"
                 for task in self.tasks
             )
         )
+
+    def get_metrics(self):
+
+        self.metrics.update_task_status(
+            self.tasks
+        )
+
+        self.metrics.update_step(
+            self.step_count
+        )
+
+        return self.metrics.get_summary()
