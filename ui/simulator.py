@@ -20,6 +20,11 @@ from simulation.failure import FailureSimulator
 
 pygame.init()
 
+
+# =====================================
+# WINDOW
+# =====================================
+
 WIDTH, HEIGHT = 1100, 720
 
 screen = pygame.display.set_mode(
@@ -32,20 +37,30 @@ pygame.display.set_caption(
 
 clock = pygame.time.Clock()
 
+
+# =====================================
+# FONTS
+# =====================================
+
 title_font = pygame.font.SysFont(
-    "Arial", 28, bold=True
+    "Arial",
+    28,
+    bold=True
 )
 
 font = pygame.font.SysFont(
-    "Arial", 21
+    "Arial",
+    21
 )
 
 small = pygame.font.SysFont(
-    "Arial", 17
+    "Arial",
+    17
 )
 
 tiny = pygame.font.SysFont(
-    "Arial", 14
+    "Arial",
+    14
 )
 
 
@@ -57,7 +72,8 @@ uavs = [
     UAV(1, 1, 1),
     UAV(2, 10, 2),
     UAV(3, 15, 15),
-    UAV(4, 5, 15)
+    UAV(4, 5, 15),
+    UAV(5, 18, 18)
 ]
 
 
@@ -106,6 +122,10 @@ GRID_SIZE = 520
 PANEL_X = 650
 
 
+# =====================================
+# POSITION HELPERS
+# =====================================
+
 def screen_pos(x, y):
 
     sx = GRID_X + (x / 20) * GRID_SIZE
@@ -117,11 +137,15 @@ def screen_pos(x, y):
 def grid_pos(mouse_x, mouse_y):
 
     x = round(
-        (mouse_x - GRID_X) / GRID_SIZE * 20
+        (mouse_x - GRID_X)
+        / GRID_SIZE
+        * 20
     )
 
     y = round(
-        (mouse_y - GRID_Y) / GRID_SIZE * 20
+        (mouse_y - GRID_Y)
+        / GRID_SIZE
+        * 20
     )
 
     x = max(0, min(20, x))
@@ -170,9 +194,11 @@ while running:
             mouse_x, mouse_y = event.pos
 
             if (
-                GRID_X <= mouse_x <= GRID_X + GRID_SIZE
+                GRID_X <= mouse_x
+                <= GRID_X + GRID_SIZE
                 and
-                GRID_Y <= mouse_y <= GRID_Y + GRID_SIZE
+                GRID_Y <= mouse_y
+                <= GRID_Y + GRID_SIZE
             ):
 
                 grid_x, grid_y = grid_pos(
@@ -229,6 +255,13 @@ while running:
         else:
 
             finished = True
+
+
+    # =================================
+    # GET REAL METRICS
+    # =================================
+
+    metrics = mission.get_metrics()
 
 
     # =================================
@@ -362,14 +395,12 @@ while running:
 
             color = (240, 80, 80)
 
-
         pygame.draw.circle(
             screen,
             color,
             (x, y),
             11
         )
-
 
         label = small.render(
             f"T{task.id}",
@@ -382,7 +413,6 @@ while running:
             True,
             (190, 195, 205)
         )
-
 
         screen.blit(
             label,
@@ -406,7 +436,6 @@ while running:
             uav.y
         )
 
-
         if uav.status == "FAILED":
 
             color = (220, 60, 60)
@@ -415,7 +444,6 @@ while running:
 
             color = (50, 170, 255)
 
-
         pygame.draw.circle(
             screen,
             color,
@@ -423,13 +451,11 @@ while running:
             15
         )
 
-
         label = small.render(
             f"UAV {uav.id}",
             True,
             (255, 255, 255)
         )
-
 
         screen.blit(
             label,
@@ -449,6 +475,10 @@ while running:
     )
 
 
+    # =================================
+    # PANEL TITLE
+    # =================================
+
     panel_title = title_font.render(
         "MISSION STATUS",
         True,
@@ -462,12 +492,13 @@ while running:
 
 
     # =================================
-    # STEP
+    # REAL METRICS
     # =================================
 
     screen.blit(
         font.render(
-            f"Simulation Step: {mission.step_count}",
+            f"Simulation Step: "
+            f"{metrics['mission_steps']}",
             True,
             (210, 215, 225)
         ),
@@ -475,44 +506,59 @@ while running:
     )
 
 
-    # =================================
-    # TASK PROGRESS
-    # =================================
-
-    completed_tasks = sum(
-        task.status == "COMPLETED"
-        for task in tasks
+    screen.blit(
+        font.render(
+            f"Tasks Completed: "
+            f"{metrics['completed_tasks']}/"
+            f"{metrics['total_tasks']}",
+            True,
+            (210, 215, 225)
+        ),
+        (PANEL_X, 207)
     )
 
 
     screen.blit(
         font.render(
-            f"Mission Progress: "
-            f"{completed_tasks}/{len(tasks)} tasks",
+            f"Completion Rate: "
+            f"{metrics['completion_rate']:.0f}%",
             True,
-            (210, 215, 225)
+            (90, 220, 130)
         ),
-        (PANEL_X, 210)
-    )
-
-
-    # =================================
-    # FAILURE COUNT
-    # =================================
-
-    failed_count = sum(
-        uav.status == "FAILED"
-        for uav in uavs
+        (PANEL_X, 239)
     )
 
 
     screen.blit(
         font.render(
-            f"UAV Failures: {failed_count}",
+            f"UAV Failures: "
+            f"{metrics['uav_failures']}",
             True,
-            (210, 215, 225)
+            (240, 100, 100)
         ),
-        (PANEL_X, 245)
+        (PANEL_X, 271)
+    )
+
+
+    screen.blit(
+        font.render(
+            f"Recovery Events: "
+            f"{metrics['recovery_events']}",
+            True,
+            (255, 190, 90)
+        ),
+        (PANEL_X, 303)
+    )
+
+
+    screen.blit(
+        font.render(
+            f"Communication Failures: "
+            f"{metrics['communication_failures']}",
+            True,
+            (180, 190, 210)
+        ),
+        (PANEL_X, 335)
     )
 
 
@@ -528,11 +574,11 @@ while running:
 
     screen.blit(
         status_title,
-        (PANEL_X, 295)
+        (PANEL_X, 375)
     )
 
 
-    y = 330
+    y = 400
 
     for uav in uavs:
 
@@ -544,67 +590,61 @@ while running:
 
             text_color = (90, 200, 255)
 
-
         text = small.render(
             f"UAV {uav.id}: {uav.status}",
             True,
             text_color
         )
 
-
         screen.blit(
             text,
             (PANEL_X, y)
         )
 
-        y += 28
+        y += 25
 
 
     # =================================
-    # RECOVERY STATUS
+    # RESILIENCE EVENT
     # =================================
 
-    if failed_count > 0:
+    if metrics["uav_failures"] > 0:
 
         recovery_title = font.render(
-            "RESILIENCE EVENT",
+            "RESILIENCE",
             True,
             (255, 255, 255)
         )
 
         screen.blit(
             recovery_title,
-            (PANEL_X, 455)
+            (PANEL_X, 525)
         )
 
 
+        failed_text = small.render(
+            f"Failures detected: "
+            f"{metrics['uav_failures']}",
+            True,
+            (240, 90, 90)
+        )
+
         screen.blit(
-            small.render(
-                "UAV 2 failure detected",
-                True,
-                (240, 90, 90)
-            ),
-            (PANEL_X, 490)
+            failed_text,
+            (PANEL_X, 552)
         )
 
 
-        screen.blit(
-            small.render(
-                "Task automatically reassigned",
-                True,
-                (255, 190, 90)
-            ),
-            (PANEL_X, 518)
+        recovery_text = small.render(
+            f"Tasks recovered: "
+            f"{metrics['recovery_events']}",
+            True,
+            (255, 190, 90)
         )
 
-
         screen.blit(
-            small.render(
-                "Mission continued successfully",
-                True,
-                (90, 210, 130)
-            ),
-            (PANEL_X, 546)
+            recovery_text,
+            (PANEL_X, 578)
         )
 
 
@@ -617,10 +657,9 @@ while running:
         pygame.draw.rect(
             screen,
             (35, 70, 48),
-            (PANEL_X, 585, 390, 48),
+            (PANEL_X, 600, 390, 42),
             border_radius=8
         )
-
 
         complete = font.render(
             "MISSION COMPLETE",
@@ -628,10 +667,9 @@ while running:
             (90, 230, 130)
         )
 
-
         screen.blit(
             complete,
-            (PANEL_X + 105, 597)
+            (PANEL_X + 105, 610)
         )
 
 

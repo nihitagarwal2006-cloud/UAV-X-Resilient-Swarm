@@ -146,6 +146,39 @@ class Mission:
 
             return False
 
+        # =====================================
+        # TASK ALREADY AT UAV LOCATION
+        # =====================================
+
+        if len(path) == 1:
+
+            task.complete()
+
+            print(
+                f"Task {task.id} completed "
+                f"immediately by UAV {uav.id}"
+            )
+
+            self.metrics.update_task_status(
+                self.tasks
+            )
+
+            self.connections = (
+                self.network.update_connections(
+                    [
+                        active_uav
+                        for active_uav in self.uavs
+                        if active_uav.status == "ACTIVE"
+                    ]
+                )
+            )
+
+            return True
+
+        # =====================================
+        # NORMAL TASK ASSIGNMENT
+        # =====================================
+
         uav.set_path(path)
 
         print(
@@ -165,9 +198,9 @@ class Mission:
         self.connections = (
             self.network.update_connections(
                 [
-                    uav
-                    for uav in self.uavs
-                    if uav.status == "ACTIVE"
+                    active_uav
+                    for active_uav in self.uavs
+                    if active_uav.status == "ACTIVE"
                 ]
             )
         )
