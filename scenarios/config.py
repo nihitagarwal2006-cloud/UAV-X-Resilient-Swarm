@@ -34,10 +34,7 @@ class ScenarioConfig:
 
     def has_communication_failure(self):
 
-        return self.scenario in [
-            self.COMMUNICATION_FAILURE,
-            self.MULTIPLE_FAILURE
-        ]
+        return self.scenario == self.COMMUNICATION_FAILURE
 
     def get_technical_failures(self):
 
@@ -45,6 +42,7 @@ class ScenarioConfig:
             return []
 
         if self.scenario == self.MULTIPLE_FAILURE:
+
             return [
                 {
                     "uav_id": 2,
