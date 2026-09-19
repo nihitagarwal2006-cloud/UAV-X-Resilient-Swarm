@@ -64,7 +64,7 @@ class ScenarioConfig:
             return [
                 {
                     "uav_id": 2,
-                    "step": 6
+                    "step": 2
                 }
             ]
 

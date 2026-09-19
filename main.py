@@ -9,7 +9,7 @@ from scenarios.config import ScenarioConfig
 # SCENARIO CONFIGURATION
 # ============================================================
 
-SCENARIO = ScenarioConfig.COMMUNICATION_FAILURE
+SCENARIO = ScenarioConfig.MULTIPLE_FAILURE
 
 scenario = ScenarioConfig(SCENARIO)
 
@@ -42,21 +42,9 @@ tasks = [
 # FAILURE CONFIGURATION
 # ============================================================
 
-failure_simulator = None
-
 technical_failures = (
     scenario.get_technical_failures()
 )
-
-if technical_failures:
-
-    first_failure = technical_failures[0]
-
-    failure_simulator = FailureSimulator(
-        failure_step=first_failure["step"],
-        uav_id=first_failure["uav_id"]
-    )
-
 
 communication_failures = (
     scenario.get_communication_failures()
@@ -64,18 +52,16 @@ communication_failures = (
 
 
 # ============================================================
-# COMMUNICATION FAILURE TEST TIMING
+# FAILURE SIMULATOR
 # ============================================================
 
-# Trigger communication loss early enough that
-# UAV 2 still has an unfinished task.
+failure_simulator = None
 
-communication_failures = [
-    {
-        "uav_id": 2,
-        "step": 2
-    }
-]
+if technical_failures:
+
+    failure_simulator = FailureSimulator(
+        failures=technical_failures
+    )
 
 
 # ============================================================
@@ -90,7 +76,7 @@ mission = Mission(
 
 
 # ============================================================
-# START MISSION
+# STARTUP INFORMATION
 # ============================================================
 
 print("\n========================================")
@@ -131,11 +117,15 @@ print(
 )
 
 
+# ============================================================
+# START MISSION
+# ============================================================
+
 mission.start()
 
 
 # ============================================================
-# RUN SIMULATION
+# SIMULATION LOOP
 # ============================================================
 
 MAX_STEPS = 1000
@@ -143,7 +133,7 @@ MAX_STEPS = 1000
 while not mission.is_complete():
 
     # --------------------------------------------------------
-    # Communication failure
+    # Communication failure injection
     # --------------------------------------------------------
 
     for failure in communication_failures:
@@ -177,14 +167,14 @@ while not mission.is_complete():
 
 
     # --------------------------------------------------------
-    # Execute simulation step
+    # Execute mission step
     # --------------------------------------------------------
 
     mission.step()
 
 
     # --------------------------------------------------------
-    # Safety protection
+    # Safety limit
     # --------------------------------------------------------
 
     if mission.step_count >= MAX_STEPS:
@@ -244,7 +234,7 @@ for uav in uavs:
 
 
 # ============================================================
-# FAILURE SUMMARY
+# FAILED UAVS
 # ============================================================
 
 if failure_simulator:
