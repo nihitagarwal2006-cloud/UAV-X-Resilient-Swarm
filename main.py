@@ -2,26 +2,16 @@ from simulation.uav import UAV
 from simulation.task import Task
 from simulation.mission import Mission
 from simulation.failure import FailureSimulator
+from scenarios.config import ScenarioConfig
 
 
 # ============================================================
 # SCENARIO CONFIGURATION
 # ============================================================
-#
-# NORMAL
-#   -> No failures
-#
-# TECHNICAL_FAILURE
-#   -> Selected UAV experiences a technical failure
-#
-# COMMUNICATION_FAILURE
-#   -> Selected UAV loses communication
-#
-SCENARIO = "TECHNICAL_FAILURE"
 
-# Used only for failure scenarios
-FAILURE_UAV_ID = 2
-FAILURE_STEP = 6
+SCENARIO = ScenarioConfig.MULTIPLE_FAILURE
+
+scenario = ScenarioConfig(SCENARIO)
 
 
 # ============================================================
@@ -53,11 +43,16 @@ tasks = [
 
 failure_simulator = None
 
-if SCENARIO == "TECHNICAL_FAILURE":
+
+technical_failures = (
+    scenario.get_technical_failures()
+)
+
+
+if technical_failures:
 
     failure_simulator = FailureSimulator(
-        failure_step=FAILURE_STEP,
-        uav_id=FAILURE_UAV_ID
+        failures=technical_failures
     )
 
 
@@ -76,6 +71,46 @@ mission = Mission(
 # START MISSION
 # ============================================================
 
+print("\n========================================")
+print("UAV-X RESILIENT SWARM SIMULATOR")
+print("========================================")
+
+print(
+    f"SCENARIO: {scenario.scenario}"
+)
+
+if technical_failures:
+
+    print("\nTECHNICAL FAILURE EVENTS:")
+
+    for failure in technical_failures:
+
+        print(
+            f"  UAV {failure['uav_id']} "
+            f"-> Step {failure['step']}"
+        )
+
+
+communication_failures = (
+    scenario.get_communication_failures()
+)
+
+
+if communication_failures:
+
+    print("\nCOMMUNICATION FAILURE EVENTS:")
+
+    for failure in communication_failures:
+
+        print(
+            f"  UAV {failure['uav_id']} "
+            f"-> Step {failure['step']}"
+        )
+
+
+print("\n========================================\n")
+
+
 mission.start()
 
 
@@ -91,17 +126,35 @@ while not mission.is_complete():
     # Communication failure scenario
     # --------------------------------------------------------
 
-    if (
-        SCENARIO == "COMMUNICATION_FAILURE"
-        and mission.step_count == FAILURE_STEP
-    ):
+    for failure in communication_failures:
 
-        mission.uav_states[FAILURE_UAV_ID].set_communication(False)
+        if (
+            mission.step_count
+            == failure["step"]
+        ):
 
-        print(
-            f"\nCOMMUNICATION FAILURE: "
-            f"UAV {FAILURE_UAV_ID} communication lost\n"
-        )
+            uav_id = failure["uav_id"]
+
+            if (
+                uav_id in mission.uav_states
+                and
+                mission.uav_states[
+                    uav_id
+                ].communication_status
+            ):
+
+                mission.uav_states[
+                    uav_id
+                ].set_communication(False)
+
+                print(
+                    f"\nCOMMUNICATION FAILURE: "
+                    f"UAV {uav_id} "
+                    f"communication lost "
+                    f"at step "
+                    f"{mission.step_count}\n"
+                )
+
 
     # --------------------------------------------------------
     # Execute one simulation step
@@ -109,8 +162,9 @@ while not mission.is_complete():
 
     mission.step()
 
+
     # --------------------------------------------------------
-    # Safety protection against infinite simulation
+    # Safety protection
     # --------------------------------------------------------
 
     if mission.step_count >= MAX_STEPS:
@@ -126,6 +180,11 @@ while not mission.is_complete():
 # ============================================================
 # FINAL RESULTS
 # ============================================================
+
+print("\n========================================")
+print("FINAL RESULTS")
+print("========================================")
+
 
 if mission.is_complete():
 
@@ -162,3 +221,31 @@ for uav in uavs:
         f"UAV {uav.id}: "
         f"{uav.status}"
     )
+
+
+# ============================================================
+# FAILURE SUMMARY
+# ============================================================
+
+if failure_simulator:
+
+    print("\nFAILED UAVs:")
+
+    failed_uavs = (
+        failure_simulator.get_failed_uavs()
+    )
+
+    if failed_uavs:
+
+        for uav_id in failed_uavs:
+
+            print(
+                f"  UAV {uav_id}"
+            )
+
+    else:
+
+        print("  None")
+
+
+print("\n========================================")
