@@ -9,7 +9,7 @@ from scenarios.config import ScenarioConfig
 # SCENARIO CONFIGURATION
 # ============================================================
 
-SCENARIO = ScenarioConfig.MULTIPLE_FAILURE
+SCENARIO = ScenarioConfig.COMMUNICATION_FAILURE
 
 scenario = ScenarioConfig(SCENARIO)
 
@@ -50,14 +50,32 @@ technical_failures = (
 
 if technical_failures:
 
+    first_failure = technical_failures[0]
+
     failure_simulator = FailureSimulator(
-        failures=technical_failures
+        failure_step=first_failure["step"],
+        uav_id=first_failure["uav_id"]
     )
 
 
 communication_failures = (
     scenario.get_communication_failures()
 )
+
+
+# ============================================================
+# COMMUNICATION FAILURE TEST TIMING
+# ============================================================
+
+# Trigger communication loss early enough that
+# UAV 2 still has an unfinished task.
+
+communication_failures = [
+    {
+        "uav_id": 2,
+        "step": 2
+    }
+]
 
 
 # ============================================================
@@ -72,7 +90,7 @@ mission = Mission(
 
 
 # ============================================================
-# START
+# START MISSION
 # ============================================================
 
 print("\n========================================")
@@ -82,6 +100,7 @@ print("========================================")
 print(
     f"SCENARIO: {scenario.scenario}"
 )
+
 
 if technical_failures:
 
@@ -94,6 +113,7 @@ if technical_failures:
             f"-> Step {failure['step']}"
         )
 
+
 if communication_failures:
 
     print("\nCOMMUNICATION FAILURE EVENTS:")
@@ -104,6 +124,7 @@ if communication_failures:
             f"  UAV {failure['uav_id']} "
             f"-> Step {failure['step']}"
         )
+
 
 print(
     "\n========================================\n"
@@ -121,9 +142,9 @@ MAX_STEPS = 1000
 
 while not mission.is_complete():
 
-    # ----------------------------------------
-    # Communication failures
-    # ----------------------------------------
+    # --------------------------------------------------------
+    # Communication failure
+    # --------------------------------------------------------
 
     for failure in communication_failures:
 
@@ -154,15 +175,17 @@ while not mission.is_complete():
                     f"{mission.step_count}\n"
                 )
 
-    # ----------------------------------------
+
+    # --------------------------------------------------------
     # Execute simulation step
-    # ----------------------------------------
+    # --------------------------------------------------------
 
     mission.step()
 
-    # ----------------------------------------
-    # Safety limit
-    # ----------------------------------------
+
+    # --------------------------------------------------------
+    # Safety protection
+    # --------------------------------------------------------
 
     if mission.step_count >= MAX_STEPS:
 
