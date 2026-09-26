@@ -1,149 +1,82 @@
-# UAV-X: Resilient BVIOS Swarm
+# UAV-X: Resilient BVLOS Swarm
 
-## Project Overview
+### UAV-X — Resilient BVLOS Swarm Challenge
+### GC1 Preliminary Design Verification — Software Proof of Concept
 
-**UAV-X Resilient Swarm** is a software-based multi-UAV swarm simulation developed for the **UAV-X: Resilient BVIOS Swarm Challenge**.
-
-The system demonstrates how a UAV swarm can maintain mission continuity despite UAV failures and communication disruptions through autonomous task allocation, path planning, communication monitoring, failure detection, task reassignment, recovery, and mission-level metrics.
-
----
-
-## Key Features
-
-### Multi-UAV Simulation
-- Five UAV agents operating as a coordinated swarm
-- UAV position and state tracking
-- Dynamic task creation
-- Automatic mission progression
-- Mission completion monitoring
-
-### Autonomous Task Allocation
-- Automatic assignment of tasks to available UAVs
-- Distance-based UAV selection
-- UAV availability and current assignments considered
-- Dynamic reassignment after UAV failures
-
-### A* Path Planning
-- Grid-based A* path planning
-- Obstacle-aware route generation
-- Flight-path visualization
-- Path replanning after task reassignment
-
-### Communication System
-- UAV-to-UAV communication network
-- Communication-range based connectivity
-- Communication link monitoring
-- Heartbeat-based UAV monitoring
-- Communication failure detection
-
-### Resilience and Recovery
-
-When a UAV becomes unavailable, the system automatically:
-
-1. Detects the UAV failure.
-2. Identifies the affected task.
-3. Searches for an available replacement UAV.
-4. Considers communication connectivity.
-5. Reassigns the task.
-6. Calculates a new path.
-7. Continues mission execution.
-
-The recovery mechanism supports multiple UAV failures during a mission.
+A simulation-first autonomous UAV swarm system designed for resilient disaster-response missions with dynamic task allocation, communication-aware relay management, UAV failure recovery, collision avoidance, and mission monitoring.
 
 ---
 
-## Failure Scenarios
+## 🚁 Project Overview
 
-The simulator provides four selectable scenarios:
+UAV-X simulates a swarm of autonomous UAVs operating in a disaster-response environment where terrestrial communication infrastructure may be unavailable.
 
-| Key | Scenario | Description |
-|-----|----------|-------------|
-| 1 | Normal Operation | Normal swarm operation without injected failures |
-| 2 | Technical Failure | Simulated UAV technical failure |
-| 3 | Communication Failure | Simulated communication loss and failure detection |
-| 4 | Multiple Failure | Multiple UAV failures during the same mission |
+The system models:
 
-Scenario selection can be performed using keys **1-4** or through the simulator interface.
+- Autonomous UAV task allocation
+- Disaster Point-of-Interest (PoI) surveying
+- Dynamic relay UAV assignment
+- Multi-hop communication connectivity
+- Communication degradation and outages
+- UAV technical failures
+- Automatic task reassignment
+- Network reconfiguration
+- Priority-aware task allocation
+- Collision and minimum-separation safety
+- Ground Control Station (GCS) reporting
+- Mission performance metrics
+- Interactive command-center visualization
 
----
-
-## Mission Metrics
-
-The system records and displays:
-
-- Total tasks
-- Completed tasks
-- Completion rate
-- UAV failures
-- Recovery events
-- Communication failures
-- Mission steps
-- Failed UAVs
-- Recovered tasks
-
-The metrics are displayed in the real-time mission-control dashboard.
+The current implementation is configured for an official-style **GC1 scenario**.
 
 ---
 
-## Interactive Mission-Control Dashboard
+# 🎯 GC1 Scenario
 
-The Pygame-based interface provides:
+The simulator models a:
 
-- Mission overview
-- Swarm map
-- UAV fleet status
-- Task status
-- Mission progress
-- Telemetry
-- Resilience statistics
-- System logs
-- Mission statistics
-- Failure and recovery information
+- **1000 m × 1000 m operational arena**
+- **Operational centre located 75 m outside the arena**
+- **10 randomly generated Points of Interest (PoIs)**
+- **100 m communication range**
+- **5 m/s maximum UAV speed**
+- **20 minute maximum flight-time model**
+- **20 m minimum inter-UAV separation**
+- UAV deployment from the operational centre
+- Autonomous PoI detection and reporting
 
-The simulator also supports interactive task creation by clicking on the map.
-
----
-
-## Geographic Map Visualization
-
-The simulator includes a geographic map layer for a more realistic disaster-response environment.
-
-Available map modes include:
-
-- **OSM MAP** - OpenStreetMap-based geographic visualization
-- **GEO MAP** - Geographic grid and basemap visualization
-- **PATHS** - Flight-path focused visualization
-
-A local map cache is included for previously loaded map tiles.
+The simulator also introduces communication and technical failures to evaluate swarm resilience.
 
 ---
 
-## System Architecture
+# 🧠 Core Capabilities
+
+## 1. Autonomous Task Allocation
+
+The swarm dynamically assigns PoIs to available UAVs.
+
+Task allocation considers:
+
+- UAV availability
+- Distance to the PoI
+- Task priority
+- Current mission state
+
+High-priority tasks are handled preferentially.
+
+---
+
+## 2. Dynamic Relay UAV Management
+
+UAVs can dynamically assume relay roles based on the current communication topology.
+
+The communication layer continuously evaluates the swarm network and updates relay assignments when the network changes.
+
+Example:
 
 ```text
-                    UAV-X RESILIENT SWARM
-                              |
-             +----------------+----------------+
-             |                |                |
-        Task Management   Communication    Simulation
-             |                |                |
-       Task Allocation    UAV Network      UAV State
-             |             Heartbeat        Movement
-             |                |                |
-             +----------------+----------------+
-                              |
-                       Mission Planner
-                              |
-                    +---------+---------+
-                    |                   |
-                A* Planner        Resilience Manager
-                    |                   |
-              Flight Paths        Failure Detection
-                                        |
-                                Recovery Manager
-                                        |
-                              Task Reallocation
-                                        |
-                                Mission Completion
-                                        |
-                                  Mission Metrics
+RELAY ROLE UPDATE: UAV 2, UAV 4, UAV 5
+RELAY ROLE UPDATE: UAV 4
+RELAY ROLE UPDATE: UAV 5
+RELAY ROLE UPDATE: UAV 3
+RELAY ROLE UPDATE: UAV 1
