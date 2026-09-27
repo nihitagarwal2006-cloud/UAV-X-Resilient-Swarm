@@ -1,41 +1,20 @@
-import networkx as nx
+import math
 
 
-class AStarPlanner:
+class WorldPlanner:
+    """Straight-line POC planner for the official open GC1 arena.
 
-    def __init__(self, width=20, height=20):
-        self.width = width
-        self.height = height
+    The arena has no obstacle geometry in the supplied GC1 sample scenario.
+    The planner therefore generates a continuous path target while the
+    mission controller enforces the swarm separation constraint.
+    """
 
-    def create_graph(self, obstacles):
-
-        graph = nx.grid_2d_graph(self.width, self.height)
-
-        for obstacle in obstacles:
-            if obstacle in graph:
-                graph.remove_node(obstacle)
-
-        return graph
-
-    def plan(self, start, goal, obstacles=None):
-
-        if obstacles is None:
-            obstacles = []
-
-        graph = self.create_graph(obstacles)
-
-        if start not in graph or goal not in graph:
-            return []
-
-        try:
-            path = nx.astar_path(
-                graph,
-                start,
-                goal,
-                heuristic=lambda a, b: abs(a[0] - b[0]) + abs(a[1] - b[1])
-            )
-
-            return path
-
-        except nx.NetworkXNoPath:
-            return []
+    def plan(self, start, goal, step_m=25.0):
+        sx, sy = start
+        gx, gy = goal
+        distance = math.hypot(gx - sx, gy - sy)
+        count = max(1, int(math.ceil(distance / step_m)))
+        return [
+            (sx + (gx - sx) * i / count, sy + (gy - sy) * i / count)
+            for i in range(1, count + 1)
+        ]

@@ -1,318 +1,71 @@
+import random
+
+from scenarios.config import ScenarioConfig
+from scenarios.gc1_config import DEFAULT_POI_COUNT, RANDOM_SEED, ARENA_WIDTH_M, ARENA_HEIGHT_M, OPERATIONAL_CENTER_X_M, OPERATIONAL_CENTER_Y_M
 from simulation.uav import UAV
 from simulation.task import Task
 from simulation.mission import Mission
-from simulation.failure import FailureSimulator
-from scenarios.config import ScenarioConfig
 
 
-# ============================================================
-# SCENARIO CONFIGURATION
-# ============================================================
-
-SCENARIO = ScenarioConfig.MULTIPLE_FAILURE
-
-scenario = ScenarioConfig(SCENARIO)
-
-
-# ============================================================
-# UAV SWARM
-# ============================================================
-
-uavs = [
-    UAV(1, 1, 1),
-    UAV(2, 10, 2),
-    UAV(3, 15, 15),
-    UAV(4, 5, 15),
-    UAV(5, 18, 18)
-]
-
-
-# ============================================================
-# MISSION TASKS
-# ============================================================
-
-tasks = [
-    Task(1, 8, 8),
-    Task(2, 18, 3),
-    Task(3, 12, 18)
-]
-
-
-# ============================================================
-# FAILURE CONFIGURATION
-# ============================================================
-
-technical_failures = (
-    scenario.get_technical_failures()
-)
-
-communication_failures = (
-    scenario.get_communication_failures()
-)
-
-
-# ============================================================
-# FAILURE SIMULATOR
-# ============================================================
-
-failure_simulator = None
-
-if technical_failures:
-
-    failure_simulator = FailureSimulator(
-        failures=technical_failures
-    )
-
-
-# ============================================================
-# CREATE MISSION
-# ============================================================
-
-mission = Mission(
-    uavs,
-    tasks,
-    failure_simulator=failure_simulator
-)
-
-
-# ============================================================
-# STARTUP INFORMATION
-# ============================================================
-
-print("\n========================================")
-print("UAV-X RESILIENT SWARM SIMULATOR")
-print("========================================")
-
-print(
-    f"SCENARIO: {scenario.scenario}"
-)
-
-
-if technical_failures:
-
-    print("\nTECHNICAL FAILURE EVENTS:")
-
-    for failure in technical_failures:
-
-        print(
-            f"  UAV {failure['uav_id']} "
-            f"-> Step {failure['step']}"
-        )
-
-
-if communication_failures:
-
-    print("\nCOMMUNICATION FAILURE EVENTS:")
-
-    for failure in communication_failures:
-
-        print(
-            f"  UAV {failure['uav_id']} "
-            f"-> Step {failure['step']}"
-        )
-
-
-print(
-    "\n========================================\n"
-)
-
-
-# ============================================================
-# START MISSION
-# ============================================================
-
-mission.start()
-
-
-# ============================================================
-# SIMULATION LOOP
-# ============================================================
-
-MAX_STEPS = 1000
-
-while not mission.is_complete():
-
-    # --------------------------------------------------------
-    # Communication failure injection
-    # --------------------------------------------------------
-
-    for failure in communication_failures:
-
-        if (
-            mission.step_count
-            == failure["step"]
-        ):
-
-            uav_id = failure["uav_id"]
-
-            if (
-                uav_id in mission.uav_states
-                and
-                mission.uav_states[
-                    uav_id
-                ].communication_status
-            ):
-
-                mission.uav_states[
-                    uav_id
-                ].set_communication(False)
-
-                print(
-                    f"\nCOMMUNICATION FAILURE: "
-                    f"UAV {uav_id} "
-                    f"communication lost "
-                    f"at step "
-                    f"{mission.step_count}\n"
-                )
-
-
-    # --------------------------------------------------------
-    # Execute mission step
-    # --------------------------------------------------------
-
-    mission.step()
-
-
-    # --------------------------------------------------------
-    # Safety limit
-    # --------------------------------------------------------
-
-    if mission.step_count >= MAX_STEPS:
-
-        print(
-            "\nMISSION STOPPED: "
-            "Maximum simulation steps reached."
-        )
-
-        break
-
-
-# ============================================================
-# FINAL RESULTS
-# ============================================================
-
-print("\n========================================")
-print("FINAL RESULTS")
-print("========================================")
-
-
-if mission.is_complete():
-
-    print("\nMISSION COMPLETE")
-
-else:
-
-    print("\nMISSION INCOMPLETE")
-
-
-# ============================================================
-# FINAL TASK STATUS
-# ============================================================
-
-print("\nFINAL TASK STATUS:")
-
-for task in tasks:
-
-    print(
-        f"Task {task.id}: "
-        f"{task.status}"
-    )
-
-
-# ============================================================
-# FINAL UAV STATUS
-# ============================================================
-
-print("\nFINAL UAV STATUS:")
-
-for uav in uavs:
-
-    print(
-        f"UAV {uav.id}: "
-        f"{uav.status}"
-    )
-
-
-# ============================================================
-# FAILED UAVS
-# ============================================================
-
-if failure_simulator:
-
-    print("\nFAILED UAVs:")
-
-    failed_uavs = (
-        failure_simulator.get_failed_uavs()
-    )
-
-    if failed_uavs:
-
-        for uav_id in failed_uavs:
-
-            print(
-                f"  UAV {uav_id}"
-            )
-
-    else:
-
-        print("  None")
-
-
-# ============================================================
-# MISSION METRICS
-# ============================================================
-
-metrics = mission.get_metrics()
-
-print("\n========================================")
-print("MISSION METRICS")
-print("========================================")
-
-print(
-    f"Total Tasks: "
-    f"{metrics['total_tasks']}"
-)
-
-print(
-    f"Completed Tasks: "
-    f"{metrics['completed_tasks']}"
-)
-
-print(
-    f"Completion Rate: "
-    f"{metrics['completion_rate']:.1f}%"
-)
-
-print(
-    f"UAV Failures: "
-    f"{metrics['uav_failures']}"
-)
-
-print(
-    f"Recovery Events: "
-    f"{metrics['recovery_events']}"
-)
-
-print(
-    f"Communication Failures: "
-    f"{metrics['communication_failures']}"
-)
-
-print(
-    f"Mission Steps: "
-    f"{metrics['mission_steps']}"
-)
-
-print(
-    f"Failed UAVs: "
-    f"{metrics['failed_uavs']}"
-)
-
-print(
-    f"Recovered Tasks: "
-    f"{metrics['recovered_tasks']}"
-)
-
-print(
-    "========================================"
-)
+def build_mission(scenario=ScenarioConfig.MULTIPLE_FAILURE, poi_count=DEFAULT_POI_COUNT):
+    random.seed(RANDOM_SEED)
+    uavs = [
+        UAV(1, OPERATIONAL_CENTER_X_M, OPERATIONAL_CENTER_Y_M),
+        UAV(2, OPERATIONAL_CENTER_X_M, OPERATIONAL_CENTER_Y_M),
+        UAV(3, OPERATIONAL_CENTER_X_M, OPERATIONAL_CENTER_Y_M),
+        UAV(4, OPERATIONAL_CENTER_X_M, OPERATIONAL_CENTER_Y_M),
+        UAV(5, OPERATIONAL_CENTER_X_M, OPERATIONAL_CENTER_Y_M),
+    ]
+    points = []
+    while len(points) < min(poi_count, 10):
+        point = (random.randint(40, 960), random.randint(40, 960))
+        if all((point[0]-x)**2 + (point[1]-y)**2 >= 80**2 for x, y in points):
+            points.append(point)
+    tasks = [Task(i + 1, x, y, "HIGH") for i, (x, y) in enumerate(points)]
+    mission = Mission(uavs, tasks, scenario=scenario)
+    mission.start()
+    return mission, uavs, tasks
+
+
+def main():
+    scenario = ScenarioConfig.MULTIPLE_FAILURE
+    mission, uavs, tasks = build_mission(scenario)
+    print("\n========================================")
+    print("UAV-X RESILIENT SWARM — GC1 POC")
+    print("========================================")
+    print(f"Scenario: {scenario}")
+    print(f"Arena: {ARENA_WIDTH_M:.0f} m x {ARENA_HEIGHT_M:.0f} m")
+    print(f"Operational centre: ({OPERATIONAL_CENTER_X_M:.0f}, {OPERATIONAL_CENTER_Y_M:.0f}) m")
+    print("Communication range: 100 m")
+    print("Max speed: 5 m/s")
+    print("Max flight time: 20 min")
+    print("POIs: 10")
+    print("========================================\n")
+
+    while not mission.is_complete() and mission.step_count < 240:
+        mission.step()
+
+    result = mission.summary()
+    print("\n========================================")
+    print("FINAL RESULTS")
+    print("========================================")
+    print("MISSION COMPLETE" if mission.is_complete() else "MISSION INCOMPLETE")
+    for task in tasks:
+        print(f"POI {task.id:02d}: {task.status}")
+    for uav in uavs:
+        print(f"UAV {uav.id}: {uav.status} | {uav.phase} | {uav.x:.1f},{uav.y:.1f}")
+    print("\nMETRICS")
+    for key, value in result.items():
+        print(f"{key}: {value}")
+    print("\nGC1 SAFETY / COMMUNICATION CHECK")
+    print(f"Packet delivery ratio: {result['packet_delivery_ratio']:.1f}%")
+    print(f"Average packet latency: {result['average_packet_latency_ms']:.1f} ms")
+    print(f"Relay allocations: {result['relay_allocations']}")
+    print(f"Network reconfigurations: {result['network_reconfigurations']}")
+    print(f"Minimum separation: {result['minimum_separation_m']:.1f} m")
+    print(f"Separation violations: {result['separation_violations']}")
+    print(f"Collision count: {result['collision_count']}")
+
+
+if __name__ == "__main__":
+    main()
